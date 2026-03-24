@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}WanderSplit — Student Travel Planner{% endblock %}
+{% block content %}
+
+{% if user.is_authenticated %}
+<div class="container">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:16px;">
+    <div>
+      <div class="page-title">Welcome back, {{ user.username }} ✈️</div>
+      <div class="page-subtitle">Plan smart. Spend less. Explore more.</div>
+    </div>
+    <a href="/trips/create/" class="btn btn-primary">+ New Trip</a>
+  </div>
+
+  {% if my_trips %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">
+      {% for trip in my_trips %}
+        <a href="/trips/{{ trip.pk }}/" class="trip-card">
+          <div class="trip-card-name">{{ trip.name }}</div>
+          <div class="trip-card-meta">
+            <span>📍 {{ trip.start_location }}</span>
+            {% if trip.start_date %}<span>📅 {{ trip.start_date }}</span>{% endif %}
+            <span>👥 {{ trip.members.count }} member{{ trip.members.count|pluralize }}</span>
+          </div>
+          <div style="margin-top:14px;">
+            <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:var(--text2);margin-bottom:4px;">
+              <span>Budget used</span>
+              <span>₹{{ trip.get_total_spent }} / ₹{{ trip.budget }}</span>
+            </div>
+            <div class="budget-bar-wrap">
+              <div class="budget-bar-fill {{ trip.get_budget_color }}" style="width:{{ trip.get_budget_percentage }}%"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+            <span class="badge badge-blue">{{ trip.pois.count }} spots</span>
+            <span class="badge badge-{% if trip.travel_mode == 'cheapest' %}green{% else %}purple{% endif %}">
+              {% if trip.travel_mode == 'cheapest' %}🚌 Cheapest{% else %}🚕 Fastest{% endif %}
+            </span>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="icon">🗺️</div>
+      <h3 style="font-family:'Syne',sans-serif;margin-bottom:8px;">No trips yet</h3>
+      <p>Create your first trip and start planning your adventure!</p>
+      <a href="/trips/create/" class="btn btn-primary" style="margin-top:20px;">Create Trip</a>
+    </div>
+  {% endif %}
+</div>
+
+{% else %}
+
+<div style="min-height:85vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:40px 24px;position:relative;overflow:hidden;">
+  <!-- Background decoration -->
+  <div style="position:absolute;top:-100px;right:-100px;width:500px;height:500px;background:radial-gradient(circle,rgba(91,106,240,0.12) 0%,transparent 70%);pointer-events:none;"></div>
+  <div style="position:absolute;bottom:-100px;left:-100px;width:400px;height:400px;background:radial-gradient(circle,rgba(139,92,246,0.08) 0%,transparent 70%);pointer-events:none;"></div>
+
+  <div style="position:relative;z-index:1;max-width:680px;">
+    <div style="font-size:3.5rem;margin-bottom:16px;">🎒</div>
+    <h1 style="font-family:'Syne',sans-serif;font-size:3rem;font-weight:800;line-height:1.1;margin-bottom:16px;">
+      Travel more.<br><span style="color:var(--accent);">Spend less.</span><br>Split smarter.
+    </h1>
+    <p style="font-size:1.1rem;color:var(--text2);margin-bottom:36px;max-width:480px;margin-left:auto;margin-right:auto;">
+      The travel planner built for students — optimize your routes, track group expenses, and never let money ruin a good trip.
+    </p>
+    <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+      <a href="/trips/register/" class="btn btn-primary" style="font-size:1rem;padding:12px 28px;">Get Started Free</a>
+      <a href="/accounts/login/" class="btn btn-ghost" style="font-size:1rem;padding:12px 28px;">Log In</a>
+    </div>
+
+    <!-- Feature pills -->
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:48px;">
+      <div class="badge badge-blue" style="padding:8px 16px;font-size:0.88rem;">🗺️ Route Optimizer</div>
+      <div class="badge badge-green" style="padding:8px 16px;font-size:0.88rem;">💸 Bill Splitter</div>
+      <div class="badge badge-purple" style="padding:8px 16px;font-size:0.88rem;">📊 Budget Tracker</div>
+      <div class="badge badge-orange" style="padding:8px 16px;font-size:0.88rem;">👥 Group Trips</div>
+      <div class="badge badge-blue" style="padding:8px 16px;font-size:0.88rem;">📚 Study Spots</div>
+    </div>
+  </div>
+</div>
+
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% block title %}Expenses — {{ trip.name }}{% endblock %}
+{% block content %}
+<div class="container">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:16px;">
+    <div>
+      <div style="font-size:0.85rem;color:var(--text3);margin-bottom:4px;">
+        <a href="/trips/{{ trip.pk }}/" style="color:var(--text2);text-decoration:none;">← {{ trip.name }}</a>
+      </div>
+      <div class="page-title">💸 Expense Tracker</div>
+      <div class="page-subtitle">Track, split, and settle your group expenses</div>
+    </div>
+    <a href="/expenses/trip/{{ trip.pk }}/add/" class="btn btn-success">+ Add Expense</a>
+  </div>
+
+  <!-- Budget Bar Card -->
+  <div class="card" style="margin-bottom:24px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:12px;">
+      <div>
+        <h3>💰 Budget Overview</h3>
+        <div style="font-size:0.85rem;color:var(--text2);margin-top:2px;">Total budget: ₹{{ trip.budget }}</div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:800;color:{% if budget_color == 'green' %}var(--accent3){% elif budget_color == 'orange' %}var(--warn){% else %}var(--danger){% endif %};">
+          ₹{{ total_spent }}
+        </div>
+        <div style="font-size:0.82rem;color:var(--text2);">spent so far</div>
+      </div>
+    </div>
+    <div class="budget-bar-wrap" style="height:14px;">
+      <div class="budget-bar-fill {{ budget_color }}" style="width:{{ budget_pct }}%"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--text3);margin-top:6px;">
+      <span>0%</span>
+      <span>
+        {% if budget_color == 'red' %}⚠️ Budget nearly exhausted!
+        {% elif budget_color == 'orange' %}⚡ {{ budget_pct|floatformat:0 }}% used — watch out
+        {% else %}✓ {{ budget_pct|floatformat:0 }}% used — looking good
+        {% endif %}
+      </span>
+      <span>100%</span>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Left: Expense list -->
+    <div>
+      <div class="card">
+        <div class="card-header">
+          <h3>All Expenses ({{ expenses.count }})</h3>
+        </div>
+
+        {% for expense in expenses %}
+          <div class="expense-row">
+            <div class="expense-icon">{{ expense.get_category_icon }}</div>
+            <div class="expense-info">
+              <div class="expense-title">{{ expense.title }}</div>
+              <div class="expense-meta">
+                {{ expense.get_category_display }}
+                · Paid by: {% for p in expense.payers.all %}{{ p.username }}{% if not forloop.last %}, {% endif %}{% endfor %}
+                · Split: {{ expense.split_among.count }} people (₹{{ expense.get_share_per_person }} each)
+              </div>
+              {% if expense.notes %}
+                <div style="font-size:0.78rem;color:var(--text3);margin-top:2px;">{{ expense.notes }}</div>
+              {% endif %}
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+              <div class="expense-amount">₹{{ expense.amount }}</div>
+              <a href="/expenses/{{ expense.pk }}/delete/" class="btn btn-sm btn-danger" onclick="return confirm('Delete this expense?')">✕</a>
+            </div>
+          </div>
+        {% empty %}
+          <div class="empty-state" style="padding:50px 0;">
+            <div class="icon">💸</div>
+            <h3 style="font-family:'Syne',sans-serif;margin-bottom:8px;">No expenses yet</h3>
+            <p>Start logging your trip expenses to track spending and split bills.</p>
+            <a href="/expenses/trip/{{ trip.pk }}/add/" class="btn btn-success" style="margin-top:20px;">+ Add First Expense</a>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Right: Stats + Settlement -->
+    <div>
+
+      <!-- Per-person summary -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">
+          <h3>👤 Per-Person Summary</h3>
+        </div>
+        {% for username, data in person_totals.items %}
+          <div style="margin-bottom:14px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:30px;height:30px;background:var(--surface2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.85rem;border:1px solid var(--border);">
+                  {{ username.0|upper }}
+                </div>
+                <span style="font-weight:500;">{{ username }}</span>
+              </div>
+              <div style="text-align:right;font-size:0.85rem;">
+                <span style="color:var(--accent3);">Paid ₹{{ data.paid }}</span>
+                <span style="color:var(--text3);margin:0 4px;">·</span>
+                <span style="color:var(--danger);">Owes ₹{{ data.owes }}</span>
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <div style="color:var(--text3);font-size:0.9rem;">No members yet.</div>
+        {% endfor %}
+      </div>
+
+      <!-- Category Breakdown -->
+      {% if category_totals %}
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">
+          <h3>📊 By Category</h3>
+        </div>
+        {% for category, amount in category_totals.items %}
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <span style="font-size:0.9rem;">{{ category }}</span>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:100px;background:var(--surface2);border-radius:100px;height:6px;overflow:hidden;">
+                <div style="height:100%;background:var(--accent);border-radius:100px;width:{% widthratio amount total_spent 100 %}%;"></div>
+              </div>
+              <span style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.9rem;color:var(--accent3);">₹{{ amount }}</span>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Settlement -->
+      <div class="card">
+        <div class="card-header">
+          <h3>🤝 Settlement</h3>
+          <span class="badge badge-green">Auto-calculated</span>
+        </div>
+        {% if settlement %}
+          <div style="font-size:0.82rem;color:var(--text2);margin-bottom:14px;">Minimum transactions to clear all debts:</div>
+          {% for tx in settlement %}
+            <div class="settlement-item">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:28px;height:28px;background:var(--danger);border-radius:50%;opacity:0.8;display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:700;">
+                  {{ tx.from.username.0|upper }}
+                </div>
+                <span style="font-weight:600;">{{ tx.from.username }}</span>
+              </div>
+              <span class="settlement-arrow">→ pays →</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:28px;height:28px;background:var(--accent3);border-radius:50%;opacity:0.8;display:flex;align-items:center;justify-content:center;font-size:0.78rem;font-weight:700;">
+                  {{ tx.to.username.0|upper }}
+                </div>
+                <span style="font-weight:600;">{{ tx.to.username }}</span>
+              </div>
+              <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--warn);font-size:1.1rem;">₹{{ tx.amount }}</span>
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="empty-state" style="padding:30px 0;">
+            <div class="icon">🎉</div>
+            <p>{% if expenses %}All settled up! No one owes anything.{% else %}Add expenses to see settlements.{% endif %}</p>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

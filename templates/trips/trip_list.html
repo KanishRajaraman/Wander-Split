@@ -1,0 +1,53 @@
+{% extends 'base.html' %}
+{% block title %}My Trips — WanderSplit{% endblock %}
+{% block content %}
+<div class="container">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:16px;">
+    <div>
+      <div class="page-title">My Trips</div>
+      <div class="page-subtitle">All your adventures in one place</div>
+    </div>
+    <a href="/trips/create/" class="btn btn-primary">+ New Trip</a>
+  </div>
+
+  {% if trips %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;">
+      {% for trip in trips %}
+        <a href="/trips/{{ trip.pk }}/" class="trip-card">
+          <div class="trip-card-name">{{ trip.name }}</div>
+          {% if trip.description %}
+            <div style="font-size:0.85rem;color:var(--text2);margin-bottom:8px;">{{ trip.description|truncatechars:80 }}</div>
+          {% endif %}
+          <div class="trip-card-meta">
+            <span>📍 {{ trip.start_location }}</span>
+            {% if trip.start_date %}<span>📅 {{ trip.start_date }}</span>{% endif %}
+          </div>
+          <div style="margin-top:14px;">
+            <div style="display:flex;justify-content:space-between;font-size:0.8rem;color:var(--text2);margin-bottom:4px;">
+              <span>Budget</span>
+              <span>₹{{ trip.get_total_spent }} / ₹{{ trip.budget }}</span>
+            </div>
+            <div class="budget-bar-wrap">
+              <div class="budget-bar-fill {{ trip.get_budget_color }}" style="width:{{ trip.get_budget_percentage }}%"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+            <span class="badge badge-blue">{{ trip.pois.count }} stops</span>
+            <span class="badge badge-purple">👥 {{ trip.members.count }}</span>
+            <span class="badge badge-{% if trip.travel_mode == 'cheapest' %}green{% else %}orange{% endif %}">
+              {% if trip.travel_mode == 'cheapest' %}🚌 Cheapest{% else %}🚕 Fastest{% endif %}
+            </span>
+          </div>
+        </a>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="empty-state">
+      <div class="icon">✈️</div>
+      <h3 style="font-family:'Syne',sans-serif;margin-bottom:8px;">No trips yet</h3>
+      <p>Plan your first adventure with WanderSplit!</p>
+      <a href="/trips/create/" class="btn btn-primary" style="margin-top:20px;">Create Your First Trip</a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

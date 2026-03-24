@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+{% block title %}{{ trip.name }} — WanderSplit{% endblock %}
+{% block content %}
+<div class="container">
+
+  <!-- Header -->
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:16px;">
+    <div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <div class="page-title">{{ trip.name }}</div>
+        <span class="badge badge-{% if trip.travel_mode == 'cheapest' %}green{% else %}purple{% endif %}">
+          {% if trip.travel_mode == 'cheapest' %}🚌 Cheapest{% else %}🚕 Fastest{% endif %}
+        </span>
+      </div>
+      <div class="page-subtitle">
+        📍 {{ trip.start_location }}
+        {% if trip.start_date %} · 📅 {{ trip.start_date }}{% if trip.end_date %} → {{ trip.end_date }}{% endif %}{% endif %}
+        · 👥 {{ trip.members.count }} member{{ trip.members.count|pluralize }}
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <a href="/trips/{{ trip.pk }}/route/" class="btn btn-primary">🗺️ Route Optimizer</a>
+      <a href="/expenses/trip/{{ trip.pk }}/" class="btn btn-ghost">💸 Expenses</a>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="grid-3" style="margin-bottom:24px;">
+    <div class="stat-card">
+      <div class="stat-value">{{ trip.pois.count }}</div>
+      <div class="stat-label">Points of Interest</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">₹{{ trip.get_total_spent }}</div>
+      <div class="stat-label">Total Spent</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-value">{{ trip.members.count }}</div>
+      <div class="stat-label">Travellers</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Left: Budget + POIs -->
+    <div>
+      <!-- Budget Card -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">
+          <h3>💰 Budget Tracker</h3>
+          <span class="badge badge-{% if budget_color == 'green' %}green{% elif budget_color == 'orange' %}orange{% else %}red{% endif %}">
+            {{ budget_pct|floatformat:0 }}% used
+          </span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.85rem;color:var(--text2);margin-bottom:6px;">
+          <span>₹{{ trip.get_total_spent }} spent</span>
+          <span>₹{{ trip.budget }} total</span>
+        </div>
+        <div class="budget-bar-wrap">
+          <div class="budget-bar-fill {{ budget_color }}" style="width:{{ budget_pct }}%"></div>
+        </div>
+        {% if budget_color == 'red' %}
+          <div style="font-size:0.82rem;color:var(--danger);margin-top:8px;">⚠️ Budget almost exhausted!</div>
+        {% elif budget_color == 'orange' %}
+          <div style="font-size:0.82rem;color:var(--warn);margin-top:8px;">⚡ Getting close to your limit</div>
+        {% else %}
+          <div style="font-size:0.82rem;color:var(--accent3);margin-top:8px;">✓ Spending is on track</div>
+        {% endif %}
+      </div>
+
+      <!-- Quick POI list -->
+      <div class="card">
+        <div class="card-header">
+          <h3>📍 Planned Stops</h3>
+          <a href="/trips/{{ trip.pk }}/route/" class="btn btn-sm btn-ghost">View Route</a>
+        </div>
+        {% for poi in pois %}
+          <div class="poi-card" style="margin-bottom:10px;">
+            <div class="poi-number">{{ forloop.counter }}</div>
+            <div class="poi-info">
+              <div class="poi-name">{{ poi.name }}</div>
+              <div class="poi-address">{{ poi.address }}</div>
+              <div class="poi-meta">
+                <span>⏱ {{ poi.estimated_duration }}min</span>
+                {% if poi.entry_cost > 0 %}<span>₹{{ poi.entry_cost }}</span>{% endif %}
+                {% if poi.is_study_friendly %}<span class="badge badge-blue" style="font-size:0.72rem;padding:2px 7px;">📚 Study-Friendly</span>{% endif %}
+                {% if poi.has_wifi %}<span class="badge badge-green" style="font-size:0.72rem;padding:2px 7px;">📶 WiFi</span>{% endif %}
+              </div>
+            </div>
+          </div>
+        {% empty %}
+          <div class="empty-state" style="padding:30px 0;">
+            <div class="icon">📍</div>
+            <p>No stops added yet.</p>
+            <a href="/trips/{{ trip.pk }}/route/" class="btn btn-sm btn-primary" style="margin-top:12px;">Add Stops</a>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Right: Members + Recent Expenses + Settlement -->
+    <div>
+      <!-- Members -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">
+          <h3>👥 Travel Squad</h3>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          {% for member in trip.members.all %}
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;background:var(--surface2);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;border:1px solid var(--border);">
+                {{ member.username.0|upper }}
+              </div>
+              <span style="font-weight:500;">{{ member.username }}</span>
+              {% if member == trip.created_by %}
+                <span class="badge badge-purple" style="font-size:0.72rem;">organiser</span>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+        <div class="divider"></div>
+        <form method="POST" action="/trips/{{ trip.pk }}/invite/" style="display:flex;gap:8px;">
+          {% csrf_token %}
+          <input type="text" name="username" placeholder="Invite by username" style="flex:1;">
+          <button type="submit" class="btn btn-sm btn-ghost">Invite</button>
+        </form>
+      </div>
+
+      <!-- Recent Expenses -->
+      <div class="card" style="margin-bottom:20px;">
+        <div class="card-header">
+          <h3>💸 Recent Expenses</h3>
+          <a href="/expenses/trip/{{ trip.pk }}/" class="btn btn-sm btn-ghost">View All</a>
+        </div>
+        {% for expense in expenses|slice:":4" %}
+          <div class="expense-row">
+            <div class="expense-icon">{{ expense.get_category_icon }}</div>
+            <div class="expense-info">
+              <div class="expense-title">{{ expense.title }}</div>
+              <div class="expense-meta">{{ expense.get_category_display }} · {{ expense.split_among.count }} person{{ expense.split_among.count|pluralize }}</div>
+            </div>
+            <div class="expense-amount">₹{{ expense.amount }}</div>
+          </div>
+        {% empty %}
+          <div class="empty-state" style="padding:24px 0;">
+            <div class="icon">💸</div>
+            <p>No expenses logged yet.</p>
+            <a href="/expenses/trip/{{ trip.pk }}/add/" class="btn btn-sm btn-primary" style="margin-top:12px;">Add Expense</a>
+          </div>
+        {% endfor %}
+        {% if expenses %}
+          <a href="/expenses/trip/{{ trip.pk }}/add/" class="btn btn-success" style="width:100%;justify-content:center;margin-top:10px;">+ Add Expense</a>
+        {% endif %}
+      </div>
+
+      <!-- Settlement Preview -->
+      {% if settlement %}
+      <div class="card">
+        <div class="card-header">
+          <h3>🤝 Who Owes Whom</h3>
+        </div>
+        {% for tx in settlement %}
+          <div class="settlement-item">
+            <span style="font-weight:600;">{{ tx.from.username }}</span>
+            <span class="settlement-arrow">→</span>
+            <span style="font-weight:600;">{{ tx.to.username }}</span>
+            <span style="font-family:'Syne',sans-serif;font-weight:700;color:var(--warn);margin-left:auto;">₹{{ tx.amount }}</span>
+          </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% block title %}Add Expense — {{ trip.name }}{% endblock %}
+{% block content %}
+<div class="container-sm">
+  <div style="font-size:0.85rem;color:var(--text3);margin-bottom:12px;">
+    <a href="/expenses/trip/{{ trip.pk }}/" style="color:var(--text2);text-decoration:none;">← Back to Expenses</a>
+  </div>
+  <div class="page-title">Add Expense</div>
+  <div class="page-subtitle">{{ trip.name }}</div>
+
+  <div class="card">
+    <form method="POST">
+      {% csrf_token %}
+
+      <div class="form-group">
+        <label>Description *</label>
+        <input type="text" name="title" placeholder="e.g. Dinner at Spice Garden, Hostel stay, Bus tickets" required>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Amount (₹) *</label>
+          <input type="number" name="amount" placeholder="0.00" min="0" step="0.01" required>
+        </div>
+        <div class="form-group">
+          <label>Category</label>
+          <select name="category">
+            {% for value, label in categories %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" name="date">
+      </div>
+
+      <!-- Who paid -->
+      <div class="form-group">
+        <label>Who paid?</label>
+        <div class="members-check">
+          {% for member in members %}
+            <label class="member-check-item">
+              <input type="checkbox" name="payers" value="{{ member.id }}" {% if member == request.user %}checked{% endif %}>
+              <span>{{ member.username }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        <div style="font-size:0.78rem;color:var(--text3);margin-top:4px;">Select all who chipped in to pay</div>
+      </div>
+
+      <!-- Split among -->
+      <div class="form-group">
+        <label>Split among</label>
+        <div style="display:flex;gap:8px;margin-bottom:8px;">
+          <button type="button" class="btn btn-sm btn-ghost" onclick="selectAll()">Select All</button>
+          <button type="button" class="btn btn-sm btn-ghost" onclick="selectNone()">Clear</button>
+        </div>
+        <div class="members-check" id="split-members">
+          {% for member in members %}
+            <label class="member-check-item">
+              <input type="checkbox" name="split_among" value="{{ member.id }}" checked>
+              <span>{{ member.username }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        <div style="font-size:0.78rem;color:var(--text3);margin-top:4px;">Leave all checked to split equally among everyone</div>
+      </div>
+
+      <!-- Live split preview -->
+      <div id="split-preview" style="background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;margin-bottom:20px;">
+        <div style="font-size:0.82rem;font-weight:600;color:var(--text2);margin-bottom:6px;">SPLIT PREVIEW</div>
+        <div id="split-amount" style="font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:700;color:var(--accent3);">₹0 per person</div>
+        <div id="split-count" style="font-size:0.8rem;color:var(--text3);">among 0 people</div>
+      </div>
+
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea name="notes" placeholder="Any extra details about this expense..."></textarea>
+      </div>
+
+      <div style="display:flex;gap:12px;">
+        <button type="submit" class="btn btn-success" style="flex:1;">Log Expense ✓</button>
+        <a href="/expenses/trip/{{ trip.pk }}/" class="btn btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function updatePreview() {
+  const amount = parseFloat(document.querySelector('[name="amount"]').value) || 0;
+  const checked = document.querySelectorAll('[name="split_among"]:checked');
+  const count = checked.length;
+  const perPerson = count > 0 ? (amount / count).toFixed(2) : 0;
+
+  document.getElementById('split-amount').textContent = `₹${perPerson} per person`;
+  document.getElementById('split-count').textContent = `among ${count} people`;
+}
+
+function selectAll() {
+  document.querySelectorAll('[name="split_among"]').forEach(cb => cb.checked = true);
+  updatePreview();
+}
+
+function selectNone() {
+  document.querySelectorAll('[name="split_among"]').forEach(cb => cb.checked = false);
+  updatePreview();
+}
+
+document.querySelector('[name="amount"]').addEventListener('input', updatePreview);
+document.querySelectorAll('[name="split_among"]').forEach(cb => cb.addEventListener('change', updatePreview));
+updatePreview();
+</script>
+{% endblock %}
